@@ -35,6 +35,14 @@
   <section id="openqasm-3-0-grammar">
 <h1>OpenQasm 3.0 Grammar<a class="headerlink" href="#openqasm-3-0-grammar" title="Permalink to this headline">¶</a></h1>
 <p>OpenQasm 3.0 Grammar specification based in <a class="reference external" href="https://www.antlr.org/">ANTLR</a> parser generator.</p>
+<p>The ANTLR grammar is intended to serve as the official reference grammar for OpenQASM3 and defines
+the set of syntactically valid statements in the language. ANTLR is used because it provides a
+human-readable EBNF format that is computer-validatable. It provides an auto-generated parser that is
+used to validate the example files (see <cite>openqasm/examples/</cite>). As an extension, it can be used
+to check whether a source file is parseable OpenQASM3 (note this does not ensure that the OpenQASM3 is semantically correct).</p>
+<p>The ANTLR parser does not attempt to be performant or construct
+an AST. Furthermore, it does not conduct any semantic analysis.</p>
+<p>The ANTLR grammar may serve as a guide when developing compiler tooling for OpenQASM3.</p>
 <div class="highlight-antlr notranslate"><div class="highlight"><pre><span></span><span class="linenos">  1</span><span class="c">/***** ANTLRv4  grammar for OpenQASM3.0. *****/</span><span class="w"></span>
 <span class="linenos">  2</span>
 <span class="linenos">  3</span><span class="k">grammar</span><span class="w"> </span><span class="nc">qasm3</span><span class="p">;</span><span class="w"></span>
@@ -165,7 +173,7 @@
 <span class="linenos">128</span><span class="w">    </span><span class="p">;</span><span class="w"></span>
 <span class="linenos">129</span>
 <span class="linenos">130</span><span class="nl">constantDeclaration</span><span class="w"></span>
-<span class="linenos">131</span><span class="w">    </span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;const&#39;</span><span class="w"> </span><span class="no">Identifier</span><span class="w"> </span><span class="nv">equalsExpression</span><span class="o">?</span><span class="w"></span>
+<span class="linenos">131</span><span class="w">    </span><span class="p">:</span><span class="w"> </span><span class="s1">&#39;const&#39;</span><span class="w"> </span><span class="no">Identifier</span><span class="w"> </span><span class="nv">equalsExpression</span><span class="w"></span>
 <span class="linenos">132</span><span class="w">    </span><span class="p">;</span><span class="w"></span>
 <span class="linenos">133</span>
 <span class="linenos">134</span><span class="c">// if multiple variables declared at once, either none are assigned or all are assigned</span><span class="w"></span>

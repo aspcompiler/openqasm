@@ -295,48 +295,55 @@ to properly take into account the finite duration of each gate.</p>
 </section>
 <section id="boxed-expressions">
 <h2>Boxed expressions<a class="headerlink" href="#boxed-expressions" title="Permalink to this headline">¶</a></h2>
-<p>We introduce a <code class="docutils literal notranslate"><span class="pre">box</span></code> expression for scoping a particular part of the circuit.
-A boxed subcircuit can never be inlined (until target code generation
-time), and optimizations across the boundary of a box are forbidden. The
-contents inside the box can be optimized. The contents around the box
-can be optimized too, e.g. it is permissible to commute a gate past a
-box by knowing the unitary implemented by the box. Delays that are
-within a box are implementation details of the box; they are invisible
-to the outside scope and therefore do not prevent commutation.</p>
+<p>We introduce a <code class="docutils literal notranslate"><span class="pre">box</span></code> statement for scoping the timing of a particular part of the circuit.
+A boxed subcircuit is different from a <code class="docutils literal notranslate"><span class="pre">gate</span></code> or <code class="docutils literal notranslate"><span class="pre">def</span></code> subroutine, in that it is merely
+an enclosure to a piece of code within the larger scope which constains it. This can be used to
+signal permissible logical-level optimizations to the compiler: optimizing operations within
+a <code class="docutils literal notranslate"><span class="pre">box</span></code> definition is permitted, and optimizations that move operations from one side to
+the other side of a box are permitted, but moving operations either into or out of the box as
+part of an optimization is forbidden. The compiler can also infer a description of the
+operation which a <code class="docutils literal notranslate"><span class="pre">box</span></code> definition is meant to realise, allowing it to re-order gates around
+the box. For example, consider a dynamical decoupling sequence inserted in a part of the circuit:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span>rx(2*π/12) q;
+box {
+    delay[ddt] q;
+    x q;
+    delay[ddt] q;
+    x q;
+    delay[ddt] q;
+}
+rx(3*π/12) q;
+</pre></div>
+</div>
+<p>By boxing the sequence, we create a box that implements the identity. The compiler is now free
+to commute a gate past the box by knowing the unitary implemented by the box:</p>
 <div class="highlight-c notranslate"><div class="highlight"><pre><span></span>rx(5*π/12) q;
 box {
-  delay[ddt] q;
-  x q;
-  delay[ddt] q;
-  x q;
-  delay[ddt] q;
+    delay[ddt] q;
+    x q;
+    delay[ddt] q;
+    x q;
+    delay[ddt] q;
 }
 </pre></div>
 </div>
-<p>Boxes can take an optional bracketed duration argument to enforce the
-timing of the <code class="docutils literal notranslate"><span class="pre">box</span></code>. This is useful in scenarios where the duration of
-A given code block is not apparent prior to runtime, but where assigning
-an explicit duration makes sense in terms of scheduling for the larger circuit.
-The natural duration of the box must be smaller than the declared duration,
-otherwise a compile-time error will be raised. A <code class="docutils literal notranslate"><span class="pre">stretch</span></code> inside the
-<code class="docutils literal notranslate"><span class="pre">box</span></code> will always be set to fill the difference between the declared
-duration and the natural duration.</p>
-<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// defines a 1ms box whose content is just a centered CNOT</span>
-<span class="n">box</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="n">ms</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">  </span><span class="n">stretch</span><span class="w"> </span><span class="n">a</span><span class="p">;</span><span class="w"></span>
-<span class="w">  </span><span class="n">delay</span><span class="p">[</span><span class="n">a</span><span class="p">]</span><span class="w"> </span><span class="n">q</span><span class="p">;</span><span class="w"></span>
-<span class="w">  </span><span class="n">cx</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span><span class="w"></span>
-<span class="w">  </span><span class="n">delay</span><span class="p">[</span><span class="n">a</span><span class="p">]</span><span class="w"> </span><span class="n">q</span><span class="p">;</span><span class="w"></span>
+<p>The compiler can thus perform optimizations without interfering with the implmentation of the
+dynamical decoupling sequence.</p>
+<p>As with other operations, we may use square brakets to assign a duration to a box: this can be
+used to put hard constraints on the execution of a particular sub-circuit by requiring it to
+have the assigned duration. This can be useful in scenarios where the exact duration of a piece
+of code is unknown (<em>e.g.</em>, if it is runtime dependent), but where it would be helpful to impose
+a duration on it for the purpose of scheduling the larger circuit. For example, if the duration
+of the parameterized gates <code class="docutils literal notranslate"><span class="pre">mygate1(a,</span> <span class="pre">b),</span> <span class="pre">mygate2(a,</span> <span class="pre">b)</span></code> depend on values of the variables
+<code class="docutils literal notranslate"><span class="pre">a</span></code> and <code class="docutils literal notranslate"><span class="pre">b</span></code> in a complex way, but an offline calculation has shown that the total will never
+require more than 150ns for all valid combinations:</p>
+<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// some complicated circuit that gives runtime values to a, b</span>
+<span class="n">box</span><span class="w"> </span><span class="p">[</span><span class="mi">150</span><span class="n">ns</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="n">delay</span><span class="p">[</span><span class="n">str1</span><span class="p">]</span><span class="w"> </span><span class="n">q1</span><span class="p">;</span><span class="w"> </span><span class="c1">// Schedule as late as possible within the box</span>
+<span class="w">    </span><span class="n">mygate1</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="o">+</span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span><span class="w"></span>
+<span class="w">    </span><span class="n">mygate2</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="o">-</span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span><span class="w"></span>
+<span class="w">    </span><span class="n">mygate1</span><span class="p">(</span><span class="n">a</span><span class="o">-</span><span class="n">b</span><span class="p">,</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span><span class="w"></span>
 <span class="p">}</span><span class="w"></span>
-
-<span class="c1">// defines a stretchy box sub-circuit and later delays for that entire duration</span>
-<span class="n">stretch</span><span class="w"> </span><span class="n">mybox_dur</span><span class="p">;</span><span class="w"></span>
-<span class="n">box</span><span class="w"> </span><span class="p">[</span><span class="n">mybox_dur</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="n">cx</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span><span class="w"></span>
-<span class="w">    </span><span class="n">delay</span><span class="p">[</span><span class="mi">200</span><span class="n">ns</span><span class="p">]</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-<span class="n">delay</span><span class="p">[</span><span class="n">mybox_dur</span><span class="p">]</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span><span class="w"></span>
-<span class="n">cx</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="w"> </span><span class="n">q</span><span class="p">[</span><span class="mi">3</span><span class="p">];</span><span class="w"></span>
 </pre></div>
 </div>
 </section>
