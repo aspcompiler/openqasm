@@ -29,23 +29,12 @@ io
     ;
 
 globalStatement
-    : subroutineDefinition
-    | externDeclaration
-    | quantumGateDefinition
-    | calibration
-    | quantumDeclarationStatement  // qubits are declared globally
-    | pragma
+    : quantumDeclarationStatement // qubits are declared globally
     ;
 
 statement
-    : expressionStatement
+    : quantumStatement
     | assignmentStatement
-    | classicalDeclarationStatement
-    | branchingStatement
-    | loopStatement
-    | endStatement
-    | aliasStatement
-    | quantumStatement
     ;
 
 quantumDeclarationStatement : quantumDeclaration SEMICOLON ;
@@ -58,7 +47,7 @@ classicalAssignment
     : Identifier designator? assignmentOperator expression
     ;
 
-assignmentStatement : ( classicalAssignment | quantumMeasurementAssignment ) SEMICOLON ;
+assignmentStatement : ( quantumMeasurementAssignment | classicalAssignment ) SEMICOLON ;
 
 returnSignature
     : ARROW classicalType
@@ -248,8 +237,8 @@ quantumStatement
 
 quantumInstruction
     : quantumGateCall
-    | quantumPhase
     | quantumMeasurement
+    | quantumPhase
     | quantumReset
     | quantumBarrier
     ;
