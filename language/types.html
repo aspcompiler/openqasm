@@ -158,18 +158,6 @@ one another.</p>
 </pre></div>
 </div>
 </section>
-<section id="signed-fixed-point-numbers">
-<h3>Signed fixed-point numbers<a class="headerlink" href="#signed-fixed-point-numbers" title="Permalink to this headline">¶</a></h3>
-<p>There are <code class="docutils literal notranslate"><span class="pre">1:m:f</span></code> fixed-point numbers with <code class="docutils literal notranslate"><span class="pre">m</span></code> integer bits, <code class="docutils literal notranslate"><span class="pre">f</span></code> fractional bits, and 1
-sign bit. The statement <code class="docutils literal notranslate"><span class="pre">fixed[m,</span> <span class="pre">f]</span> <span class="pre">name;</span></code> declares a <code class="docutils literal notranslate"><span class="pre">1:m:f</span></code> fixed-point number.</p>
-<div class="highlight-c notranslate"><div class="highlight"><pre><span></span><span class="c1">// Declare a 32-bit fixed point number.</span>
-<span class="c1">// The number is signed, has 7 integer bits</span>
-<span class="c1">// and 24 fractional bits. The decimal number</span>
-<span class="c1">// assignment is implicitly cast.</span>
-<span class="n">fixed</span><span class="p">[</span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="mi">24</span><span class="p">]</span><span class="w"> </span><span class="n">my_fixed</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">-7.0625</span><span class="p">;</span><span class="w"></span>
-</pre></div>
-</div>
-</section>
 <section id="floating-point-numbers">
 <h3>Floating point numbers<a class="headerlink" href="#floating-point-numbers" title="Permalink to this headline">¶</a></h3>
 <p>IEEE 754 floating point registers may be declared with <code class="docutils literal notranslate"><span class="pre">float[size]</span> <span class="pre">name;</span></code>, where <code class="docutils literal notranslate"><span class="pre">float[64]</span></code> would
@@ -202,7 +190,7 @@ compatible with run-time values on some platforms.</p>
 <section id="complex-numbers">
 <h3>Complex numbers<a class="headerlink" href="#complex-numbers" title="Permalink to this headline">¶</a></h3>
 <p>Complex numbers may be declared as <code class="docutils literal notranslate"><span class="pre">complex[type[size]]</span> <span class="pre">name</span></code>, for a numeric OpenQASM classical type
-<code class="docutils literal notranslate"><span class="pre">type</span></code> (<code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">fixed</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">angle</span></code>) and a number of bits <code class="docutils literal notranslate"><span class="pre">size</span></code>. The real
+<code class="docutils literal notranslate"><span class="pre">type</span></code> (<code class="docutils literal notranslate"><span class="pre">int</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">angle</span></code>) and a number of bits <code class="docutils literal notranslate"><span class="pre">size</span></code>. The real
 and imaginary parts of the complex number are <code class="docutils literal notranslate"><span class="pre">type[size]</span></code> types. For instance, <code class="docutils literal notranslate"><span class="pre">complex[float[32]]</span> <span class="pre">c</span></code>
 would declare a complex number with real and imaginary parts that are 32-bit floating point numbers. The
 <code class="docutils literal notranslate"><span class="pre">im</span></code> keyword defines the imaginary number <span class="math notranslate nohighlight">\(sqrt(-1)\)</span>. <code class="docutils literal notranslate"><span class="pre">complex[type[size]]</span></code> types are initalized as
@@ -416,6 +404,7 @@ variables whose values may only be known at run time.</p>
 <li class="toctree-l2"><a class="reference internal" href="directives.html#input-output">Input/output</a></li>
 <li class="toctree-l2"><a class="reference internal" href="delays.html">Circuit timing</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pulses.html">Pulse-level descriptions of gates and measurement</a></li>
+<li class="toctree-l2"><a class="reference internal" href="openpulse.html">OpenPulse Grammar</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../grammar/index.html">OpenQasm 3.0 Grammar</a></li>
@@ -458,7 +447,7 @@ variables whose values may only be known at run time.</p>
       &copy;2017-2020, Andrew W. Cross, Lev S. Bishop, John A. Smolin, Jay M. Gambetta.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.2.0</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
