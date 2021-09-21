@@ -331,7 +331,7 @@ subset of (qu)bits, i.e. by an index set. A register so indexed is
 interpreted as a register of the same type but with a different size.
 The register slice is a reference to the original register. A register
 cannot be indexed by an empty index set.</p>
-<p>An index set can be specified by a single unsigned integer, a
+<p>An index set can be specified by a single integer (signed or unsigned), a
 comma-separated list of unsigned integers <code class="docutils literal notranslate"><span class="pre">a,b,c,…</span></code>, or a range. A
 range is written as <code class="docutils literal notranslate"><span class="pre">a:b</span></code> or <code class="docutils literal notranslate"><span class="pre">a:c:b</span></code> where <code class="docutils literal notranslate"><span class="pre">a</span></code>, <code class="docutils literal notranslate"><span class="pre">b</span></code>, and <code class="docutils literal notranslate"><span class="pre">c</span></code> are integers (signed or unsigned).
 The range corresponds to the set <span class="math notranslate nohighlight">\(\{a, a+c, a+2c, \dots, a+mc\}\)</span>
