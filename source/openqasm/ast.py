@@ -37,8 +37,18 @@ class Program(OpenNode):
     """
 
     statements: List[Statement]
-    version: dict[str, int] = field(init=False, default_factory=dict, compare=False)
+    version: str = field(init=False, default="")
+    includes: List[Include] = field(init=False, default_factory=list)
     io_variables: List[IODeclaration] = field(init=False, default_factory=list)
+
+
+@dataclass
+class Include(OpenNode):
+    """
+    An include statement
+    """
+
+    filename: str
 
 
 class Statement(OpenNode):
@@ -67,11 +77,6 @@ class ExpressionStatement(Statement):
     expression: Expression
 
 
-class QubitDeclTypeName(Enum):
-    qubit = auto()  # OpenQASM 3 style.
-    qreg = auto()  # OpenQASM 2 style.
-
-
 @dataclass
 class QubitDeclaration(Statement):
     """
@@ -87,7 +92,6 @@ class QubitDeclaration(Statement):
 
     """
 
-    decl_type_name: QubitDeclTypeName
     qubit: Qubit
     designator: Optional[Expression]
 
@@ -105,7 +109,7 @@ class QuantumGateDefinition(Statement):
 
     """
 
-    name: str
+    name: Identifier
     arguments: List[ClassicalArgument]
     qubits: List[Identifier]
     body: List[QuantumStatement]
@@ -147,13 +151,31 @@ class ExternDeclaration(Statement):
 
     """
 
-    name: str
+    name: Identifier
     classical_types: List[ClassicalType]
     return_type: Optional[ClassicalType]
 
 
+class Expression(OpenNode):
+    """An expression: anything that returns a value"""
+
+
 @dataclass
-class Qubit(OpenNode):
+class Identifier(Expression):
+    """
+    An identifier
+
+    Example::
+
+        q1
+
+    """
+
+    name: str
+
+
+@dataclass
+class Qubit(Identifier):
     """
     A qubit
 
@@ -164,12 +186,6 @@ class Qubit(OpenNode):
         q  // <- Qubit
 
     """
-
-    name: str
-
-
-class Expression(OpenNode):
-    """An expression: anything that returns a value"""
 
 
 UnaryOperator = Enum("UnaryOperator", "~ ! -")
@@ -211,7 +227,14 @@ class BinaryExpression(Expression):
     rhs: Expression
 
 
-ConstantName = Enum("ConstantName", "pi π tau 𝜏 euler ℇ")
+class ConstantName(Enum):
+    """
+    Known constant names
+    """
+
+    pi = auto()
+    tau = auto()
+    euler = auto()
 
 
 @dataclass
@@ -227,20 +250,6 @@ class Constant(Expression):
     """
 
     name: ConstantName
-
-
-@dataclass
-class Identifier(Expression):
-    """
-    An identifier
-
-    Example::
-
-        q1
-
-    """
-
-    name: str
 
 
 @dataclass
@@ -304,7 +313,6 @@ class TimeUnit(Enum):
     dt = auto()
     ns = auto()
     us = auto()
-    µs = auto()
     ms = auto()
     s = auto()
 
@@ -337,7 +345,7 @@ class FunctionCall(Expression):
 
     """
 
-    name: str
+    name: Identifier
     arguments: List[Expression]
 
 
@@ -404,7 +412,7 @@ class QuantumGate(QuantumInstruction):
     """
 
     modifiers: List[QuantumGateModifier]
-    name: str
+    name: Identifier
     arguments: List[Expression]
     qubits: List[Union[IndexIdentifier, Identifier]]
 
@@ -516,7 +524,7 @@ class ClassicalArgument(OpenNode):
     """
 
     type: ClassicalType
-    name: str
+    name: Identifier
 
 
 @dataclass
@@ -534,7 +542,7 @@ class ClassicalDeclaration(Statement):
     init_expression: Optional[Expression]
 
 
-class IOIdentifierName(Enum):
+class IOKeyword(Enum):
     output = auto()
     input = auto()
 
@@ -550,7 +558,7 @@ class IODeclaration(ClassicalDeclaration):
         output bit select;
     """
 
-    io_identifier: IOIdentifierName
+    io_identifier: IOKeyword
 
 
 @dataclass
@@ -574,31 +582,59 @@ class ClassicalType(OpenNode):
 
 
 @dataclass
-class SingleDesignatorType(ClassicalType):
+class IntType(ClassicalType):
     """
-    Type with one designator, e.g, int, uint, float, angle, bit array
+    Class for signed int type with a designator.
 
-    Example::
+    Example:
 
-        int[32]
-        uint[32]
-        float[32]
-        angle[32]
+        int[8]
+        int[16]
     """
 
-    type: SingleDesignatorTypeName
     designator: Optional[Expression]
 
 
-class SingleDesignatorTypeName(Enum):
+@dataclass
+class UintType(ClassicalType):
     """
-    Single designator types
+    Class for unsigned int type with a designator.
+
+    Example:
+
+        uint[8]
+        uint[16]
     """
 
-    int = auto()
-    uint = auto()
-    float = auto()
-    angle = auto()
+    designator: Optional[Expression]
+
+
+@dataclass
+class FloatType(ClassicalType):
+    """
+    Class for float type with a designator.
+
+    Example:
+
+        float[8]
+        float[16]
+    """
+
+    designator: Optional[Expression]
+
+
+@dataclass
+class AngleType(ClassicalType):
+    """
+    Class for angle type with a designator.
+
+    Example:
+
+        angle[8]
+        angle[16]
+    """
+
+    designator: Optional[Expression]
 
 
 @dataclass
@@ -612,42 +648,25 @@ class BitType(ClassicalType):
         creg[8]
     """
 
-    type: BitTypeName
     designator: Optional[Expression]
 
 
-class BitTypeName(Enum):
+class BoolType(ClassicalType):
     """
-    Bit types
-    """
-
-    bit = auto()
-    creg = auto()
-
-
-@dataclass
-class NoDesignatorType(ClassicalType):
-    """
-    Type with no designators.
-
-    Example::
-
-        bool
-        duration
-        stretch
+    Class for Boolean type.
     """
 
-    type: NoDesignatorTypeName
 
-
-class NoDesignatorTypeName(Enum):
+class DurationType(ClassicalType):
     """
-    No designator type names
+    Class for duration type.
     """
 
-    bool = auto()
-    duration = auto()
-    stretch = auto()
+
+class StretchType(ClassicalType):
+    """
+    Class for stretch type.
+    """
 
 
 @dataclass
@@ -661,7 +680,7 @@ class ComplexType(ClassicalType):
         complex[float[32]]
     """
 
-    base_type: Union[SingleDesignatorType, DoubleDesignatorType]
+    base_type: Union[IntType, UintType, FloatType, AngleType]
 
 
 class IndexIdentifier(OpenNode):
@@ -787,9 +806,9 @@ class CalibrationDefinition(Statement):
         }
     """
 
-    name: str
+    name: Identifier
     arguments: List[ClassicalArgument]
-    qubits: List[str]
+    qubits: List[Qubit]
     return_type: Optional[ClassicalType]
     body: str
 
@@ -808,7 +827,7 @@ class SubroutineDefinition(Statement):
     }
     """
 
-    name: str
+    name: Identifier
     arguments: List[Union[ClassicalArgument, QuantumArgument]]
     return_type: Optional[ClassicalType]
     body: List[Statement]
@@ -899,7 +918,7 @@ class BranchingStatement(Statement):
 
     condition: Expression
     if_block: List[Statement]
-    else_block: Optional[List[Statement]]
+    else_block: List[Statement]
 
 
 @dataclass
