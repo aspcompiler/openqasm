@@ -50,14 +50,13 @@ from openqasm.ast import (
     IntType,
     IODeclaration,
     IOKeyword,
-    OpenNode,
     Program,
+    QASMNode,
     QuantumArgument,
     QuantumGate,
     QuantumGateModifier,
     QuantumMeasurementAssignment,
     QuantumPhase,
-    Qubit,
     QubitDeclaration,
     QuantumGateDefinition,
     QuantumBarrier,
@@ -84,14 +83,14 @@ from openqasm.ast import (
 _TYPE_NODE_INIT = {"int": IntType, "uint": UintType, "float": FloatType, "angle": AngleType}
 
 
-def parse(openqasm3_program: str) -> OpenNode:
+def parse(openqasm3_program: str) -> QASMNode:
     lexer = qasm3Lexer(InputStream(openqasm3_program))
     stream = CommonTokenStream(lexer)
     parser = qasm3Parser(stream)
 
     tree = parser.program()
 
-    return OpenNodeVisitor().visitProgram(tree)
+    return QASMNodeVisitor().visitProgram(tree)
 
 
 def get_span(node: Union[ParserRuleContext, TerminalNode]) -> Span:
@@ -102,10 +101,10 @@ def get_span(node: Union[ParserRuleContext, TerminalNode]) -> Span:
         return Span(node.symbol.line, node.symbol.start, node.symbol.line, node.symbol.stop)
 
 
-def add_span(open_node: OpenNode, span: Span) -> OpenNode:
+def add_span(node: QASMNode, span: Span) -> QASMNode:
     """Set the span of a node and return the node"""
-    open_node.span = span
-    return open_node
+    node.span = span
+    return node
 
 
 def combine_span(first: Span, second: Span):
@@ -128,7 +127,7 @@ def span(func):
     return wrapped
 
 
-class OpenNodeVisitor(qasm3Visitor):
+class QASMNodeVisitor(qasm3Visitor):
     @span
     def visitProgram(self, ctx: qasm3Parser.ProgramContext):
 
@@ -237,7 +236,7 @@ class OpenNodeVisitor(qasm3Visitor):
     def visitQuantumDeclaration(self, ctx: qasm3Parser.QuantumDeclarationContext):
         return QubitDeclaration(
             add_span(
-                Qubit(
+                Identifier(
                     ctx.Identifier().getText(),
                 ),
                 get_span(ctx.Identifier()),
@@ -435,8 +434,8 @@ class OpenNodeVisitor(qasm3Visitor):
 
         type_name = ctx.singleDesignatorType().getText()
         if type_name in _TYPE_NODE_INIT:
-            type_designator = self.visit(ctx.designator())
-            type_node = _TYPE_NODE_INIT[type_name](type_designator)
+            type_size = self.visit(ctx.designator())
+            type_node = _TYPE_NODE_INIT[type_name](type_size)
         else:
             # To capture potential parser errors.
             raise ValueError(f"Type name {type_name} not found.")
@@ -711,7 +710,7 @@ class OpenNodeVisitor(qasm3Visitor):
             if ctx.calibrationArgumentList()
             else [],
             qubits=[
-                add_span(Qubit(id.getText()), get_span(id))
+                add_span(Identifier(id.getText()), get_span(id))
                 for id in ctx.identifierList().Identifier()
             ],
             return_type=self.visit(ctx.returnSignature().classicalType())
@@ -728,8 +727,8 @@ class OpenNodeVisitor(qasm3Visitor):
         if ctx.singleDesignatorType():
             type_name = ctx.singleDesignatorType().getText()
             if type_name in _TYPE_NODE_INIT:
-                type_designator = self.visit(ctx.designator())
-                type_node = _TYPE_NODE_INIT[type_name](type_designator)
+                type_size = self.visit(ctx.designator())
+                type_node = _TYPE_NODE_INIT[type_name](type_size)
             else:
                 # To capture potential parser error.
                 raise ValueError("Type name {type_name} not found.")
@@ -763,8 +762,8 @@ class OpenNodeVisitor(qasm3Visitor):
         if ctx.singleDesignatorType():
             type_name = ctx.singleDesignatorType().getText()
             if type_name in _TYPE_NODE_INIT:
-                type_designator = self.visit(ctx.designator())
-                type_node = _TYPE_NODE_INIT[type_name](type_designator)
+                type_size = self.visit(ctx.designator())
+                type_node = _TYPE_NODE_INIT[type_name](type_size)
             else:
                 # To capture potential parser errors.
                 raise ValueError(f"Type name {type_name} not found.")
@@ -790,8 +789,8 @@ class OpenNodeVisitor(qasm3Visitor):
         if ctx.singleDesignatorType():
             type_name = ctx.singleDesignatorType().getText()
             if type_name in _TYPE_NODE_INIT:
-                type_designator = self.visit(ctx.designator())
-                type_node = _TYPE_NODE_INIT[type_name](type_designator)
+                type_size = self.visit(ctx.designator())
+                type_node = _TYPE_NODE_INIT[type_name](type_size)
             else:
                 # To capture potential parser errors.
                 raise ValueError(f"Type name {type_name} not found.")
@@ -838,7 +837,7 @@ class OpenNodeVisitor(qasm3Visitor):
     def visitQuantumArgument(self, ctx: qasm3Parser.QuantumArgumentContext):
         return QuantumArgument(
             add_span(
-                Qubit(
+                Identifier(
                     ctx.Identifier().getText(),
                 ),
                 get_span(ctx.Identifier()),

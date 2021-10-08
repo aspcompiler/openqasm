@@ -19,7 +19,7 @@ class Span:
 
 
 @dataclass
-class OpenNode:
+class QASMNode:
     """Base class for all OpenQASM 3 nodes"""
 
     span: Optional[Span] = field(init=False, default=None, compare=False)
@@ -31,7 +31,7 @@ class OpenNode:
 
 
 @dataclass
-class Program(OpenNode):
+class Program(QASMNode):
     """
     An entire OpenQASM 3 program represented by a list of top level statements
     """
@@ -43,7 +43,7 @@ class Program(OpenNode):
 
 
 @dataclass
-class Include(OpenNode):
+class Include(QASMNode):
     """
     An include statement
     """
@@ -51,7 +51,7 @@ class Include(OpenNode):
     filename: str
 
 
-class Statement(OpenNode):
+class Statement(QASMNode):
     """A statement: anything that can appear on its own line"""
 
 
@@ -92,8 +92,8 @@ class QubitDeclaration(Statement):
 
     """
 
-    qubit: Qubit
-    designator: Optional[Expression]
+    qubit: Identifier
+    size: Optional[Expression]
 
 
 @dataclass
@@ -156,7 +156,7 @@ class ExternDeclaration(Statement):
     return_type: Optional[ClassicalType]
 
 
-class Expression(OpenNode):
+class Expression(QASMNode):
     """An expression: anything that returns a value"""
 
 
@@ -172,20 +172,6 @@ class Identifier(Expression):
     """
 
     name: str
-
-
-@dataclass
-class Qubit(Identifier):
-    """
-    A qubit
-
-    Example::
-
-        qubit q;
-
-        q  // <- Qubit
-
-    """
 
 
 UnaryOperator = Enum("UnaryOperator", "~ ! -")
@@ -425,7 +411,7 @@ class GateModifierName(Enum):
 
 
 @dataclass
-class QuantumGateModifier(OpenNode):
+class QuantumGateModifier(QASMNode):
     """
     A quantum gate modifier
 
@@ -518,7 +504,7 @@ class QuantumMeasurementAssignment(Statement):
 
 
 @dataclass
-class ClassicalArgument(OpenNode):
+class ClassicalArgument(QASMNode):
     """
     Classical argument for a gate or subroutine declaration
     """
@@ -575,7 +561,7 @@ class ConstantDeclaration(Statement):
     init_expression: Expression
 
 
-class ClassicalType(OpenNode):
+class ClassicalType(QASMNode):
     """
     Base class for classical type
     """
@@ -592,7 +578,7 @@ class IntType(ClassicalType):
         int[16]
     """
 
-    designator: Optional[Expression]
+    size: Optional[Expression]
 
 
 @dataclass
@@ -606,7 +592,7 @@ class UintType(ClassicalType):
         uint[16]
     """
 
-    designator: Optional[Expression]
+    size: Optional[Expression]
 
 
 @dataclass
@@ -620,7 +606,7 @@ class FloatType(ClassicalType):
         float[16]
     """
 
-    designator: Optional[Expression]
+    size: Optional[Expression]
 
 
 @dataclass
@@ -634,7 +620,7 @@ class AngleType(ClassicalType):
         angle[16]
     """
 
-    designator: Optional[Expression]
+    size: Optional[Expression]
 
 
 @dataclass
@@ -648,7 +634,7 @@ class BitType(ClassicalType):
         creg[8]
     """
 
-    designator: Optional[Expression]
+    size: Optional[Expression]
 
 
 class BoolType(ClassicalType):
@@ -683,7 +669,7 @@ class ComplexType(ClassicalType):
     base_type: Union[IntType, UintType, FloatType, AngleType]
 
 
-class IndexIdentifier(OpenNode):
+class IndexIdentifier(QASMNode):
     """
     Quantum or classical identifier,
     indexed or not indexed.
@@ -750,7 +736,7 @@ class Slice(IndexIdentifier):
 
 
 @dataclass
-class RangeDefinition(OpenNode):
+class RangeDefinition(QASMNode):
     """
     Range definition.
 
@@ -808,7 +794,7 @@ class CalibrationDefinition(Statement):
 
     name: Identifier
     arguments: List[ClassicalArgument]
-    qubits: List[Qubit]
+    qubits: List[Identifier]
     return_type: Optional[ClassicalType]
     body: str
 
@@ -834,7 +820,7 @@ class SubroutineDefinition(Statement):
 
 
 @dataclass
-class QuantumArgument(OpenNode):
+class QuantumArgument(QASMNode):
     """
     Quantum argument in subroutine definition
 
@@ -846,8 +832,8 @@ class QuantumArgument(OpenNode):
 
     """
 
-    qubit: Qubit
-    designator: Optional[Expression]
+    qubit: Identifier
+    size: Optional[Expression]
 
 
 @dataclass
@@ -997,7 +983,7 @@ class Box(TimingStatement):
 
 
 @dataclass
-class DurationOf(OpenNode):
+class DurationOf(QASMNode):
     """
     Duration Of
 
