@@ -1,0 +1,16 @@
+range_definition: _LBRACKET INTEGER? _COLON INTEGER? (_COLON INTEGER)? _RBRACKET
+
+index_identifier: IDENTIFIER range_definition
+                | IDENTIFIER _LBRACKET INTEGER _RBRACKET
+
+_NEWLINE: /[\r\n]+/
+_LBRACKET: "["
+_RBRACKET: "]"
+_COLON: ":"
+
+%import common.SIGNED_INT -> INTEGER
+%import common.CNAME -> IDENTIFIER
+%import common.WS
+
+%ignore WS
+%ignore _NEWLINE

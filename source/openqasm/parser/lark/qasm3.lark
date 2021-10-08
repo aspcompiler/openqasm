@@ -2,11 +2,14 @@
 
 // Parser grammar
 
+// Current problems in ANTLR grammar:
+// 1. Conflicts between quantum instruction and quantum measurement assignment.
+
 program: header (global_statement | statement)*
 
 header: [version] include* io*
 
-version: "OPENQASM" (INTEGER | REAL) _SEMICOLON
+version: "OPENQASM" (INTEGER | REALNUMBER) _SEMICOLON
 
 include: "include" STRINGLITERAL _SEMICOLON
 
@@ -24,30 +27,28 @@ global_statement: subroutine_definition
 statement: expression_statement
          | assignment_statement
          | classical_declaration_statement
+         | constant_declaration_statement
          | branching_statement
          | loop_statement
          | end_statement
          | alias_statement
          | quantum_statement
 
-quantum_declaration_statement: quantumdeclaration _SEMICOLON
+quantum_declaration_statement: quantum_declaration _SEMICOLON
 
-classical_declaration_statement:
-        (classical_declaration | constant_declaration) _SEMICOLON
+// classical_declaration_statement: (classical_declaration | constant_declaration) _SEMICOLON
 
-classical_assignment:
-        IDENTIFIER designator? assignment_operator expression
+classical_assignment_statement: IDENTIFIER designator? assignment_operator expression _SEMICOLON
 
-assignment_statement:
-        (classical_assignment | quantum_measurement_assignment) _SEMICOLON
+assignment_statement: classical_assignment_statement | quantum_measurement_assignment_statement
 
-return_signature: ARROW classical_type
+return_signature: _ARROW classical_type
 
 // Types and casting
 
 designator: _LBRACKET expression _RBRACKET
 
-identifier_list: IDENTIFIER ("," IDENTIFIER)*
+identifier_list: IDENTIFIER (_COMMA IDENTIFIER)*
 
 // Quantum types
 quantum_declaration: "qreg" IDENTIFIER designator?
@@ -56,11 +57,9 @@ quantum_declaration: "qreg" IDENTIFIER designator?
 quantum_argument: "qreg" IDENTIFIER designator?
                    | "qubit" designator? IDENTIFIER
 
-quantum_argument_list: quantum_argument ("," quantum_argument)*
+// quantum_argument_list: quantum_argument (_COMMA quantum_argument)*
 
 // Classical types
-
-bit_type: "bit" | "creg"
 
 single_designator_type: "int"
                       | "uint"
@@ -72,66 +71,63 @@ no_designator_type: "bool"
 
 classical_type: single_designator_type designator
               | no_designator_type
-              | bit_type designator?
+              | BIT_TYPE designator?
               | "complex" _LBRACKET numeric_type _RBRACKET
 
 // Numeric types
 numeric_type: single_designator_type designator
 
-constant_declaration: "const" IDENTIFIER equals_expression
+constant_declaration_statement: "const" IDENTIFIER equals_expression _SEMICOLON
 
 // if multiple variables declared at once, either none are assigned or all are assigned
 // prevents ambiguity with qubit arguments in subroutine calls
 
-single_designator_declaration: single_designator_type designator IDENTIFIER equals_expression?
+single_designator_declaration_statement: single_designator_type designator IDENTIFIER equals_expression? _SEMICOLON
 
-no_designator_declaration: no_designator_type IDENTIFIER equals_expression?
+no_designator_declaration_statement: no_designator_type IDENTIFIER equals_expression? _SEMICOLON
 
-bitdeclaration: ("creg" indexidentifier | "bit" indexidentifier) equals_expression?
+bit_declaration_statement: ("creg" IDENTIFIER designator? | "bit" designator? IDENTIFIER) equals_expression? _SEMICOLON
 
-complex_declaration: "complex" _LBRACKET numeric_type _RBRACKET IDENTIFIER equals_expression?
+complex_declaration_statement: "complex" _LBRACKET numeric_type _RBRACKET IDENTIFIER equals_expression? _SEMICOLON
 
-classical_declaration: single_designator_declaration
-                     | no_designator_declaration
-                     | bit_declaration
-                     | complex_declaration
+classical_declaration_statement: single_designator_declaration_statement
+                               | no_designator_declaration_statement
+                               | bit_declaration_statement
+                               | complex_declaration_statement
 
-classical_type_list: classical_type ("," classical_type)*
+classical_type_list: classical_type (_COMMA classical_type)*
 
 classical_argument: (single_designator_type designator | no_designator_type) IDENTIFIER
                   | "creg" IDENTIFIER designator?
                   | "bit" designator? IDENTIFIER
                   | "complex" _LBRACKET numeric_type _RBRACKET IDENTIFIER
 
-classical_argument_list: classical_argument ("," classical_argument)*
+classical_argument_list: classical_argument (_COMMA classical_argument)*
 
 any_type_argument: classical_argument | quantum_argument
 
-any_type_argument_list: any_type_argument ("," any_type_argument)
+any_type_argument_list: any_type_argument (_COMMA any_type_argument)
 
 // Aliasing
 
-alias_statement: "let" IDENTIFIER "->" index_identifier _SEMICOLON
+alias_statement: "let" IDENTIFIER _EQUALS (index_identifier | IDENTIFIER) _SEMICOLON
 
 // Register concatenation and slicing
 
 index_identifier: IDENTIFIER range_definition
-                | IDENTIFIER (_LBRACKET expression_list _RBRACKET)?
-                | index_identifier "||" index_identifier
+                | IDENTIFIER _LBRACKET expression_list _RBRACKET
+// TODO: See what changes will be made to "||" grammar
+//                | (index_identifier | IDENTIFIER)  "||" (index_identifier | IDENTIFIER)
 
-index_identifier_list: index_identifier ("," index_identifier)*
+index_identifier_list: (index_identifier | IDENTIFIER) (_COMMA (index_identifier | IDENTIFIER))*
 
-range_definition: _LBRACKET expression? ":" expression? (":" expression)? _RBRACKET
+range_definition: _LBRACKET expression? _COLON expression? (_COLON expression)? _RBRACKET
 
 // Gates and built-in quantum instructions
 
 quantum_gate_definition: "gate" quantum_gate_signature quantum_block
 
-quantum_gate_signature: quantum_gate_name (_LBRACKET identifier_list? _RBRACKET)? identifier_list
-
-quantum_gate_name: "U"
-                 | "CX"
-                 | IDENTIFIER
+quantum_gate_signature: QUANTUM_GATE_NAME (_LBRACKET identifier_list? _RBRACKET)? identifier_list
 
 quantum_block: _LBRACE (quantum_statement | quantum_loop)* _RBRACE
 
@@ -140,14 +136,10 @@ quantum_loop: loop_signature quantum_loop_block
 
 quantum_loop_block: quantum_statement | _LBRACE quantum_statement* _RBRACE
 
-quantum_statement: quantum_instruction _SEMICOLON
+quantum_statement: quantum_instruction_statement
                  | timing_statement
 
-quantum_instruction: quantum_gate_call
-                   | quantum_phase
-                   | quantum_measurement
-                   | quantum_reset
-                   | quantum_barrier
+quantum_instruction_statement: (quantum_gate_call | quantum_phase | quantum_measurement | quantum_reset | quantum_barrier) _SEMICOLON
 
 quantum_phase: quantum_gate_modifier* "gphase" _LPAREN expression _RPAREN index_identifier_list?
 
@@ -155,8 +147,8 @@ quantum_reset: "reset" index_identifier_list
 
 quantum_measurement: "measure" index_identifier_list
 
-quantum_measurement_assignment: quantum_measurement (ARROW index_identifier_list)?
-                              | index_identifier_list "->" quantum_measurement
+quantum_measurement_assignment_statement: quantum_measurement _ARROW index_identifier_list _SEMICOLON
+                                        | index_identifier_list _ARROW quantum_measurement _SEMICOLON
 
 quantum_barrier: "barrier" index_identifier_list?
 
@@ -166,7 +158,7 @@ pow_modifier: "pow" _LPAREN expression _RPAREN
 
 ctrl_modifier: ("ctrl" | "negctrl") (_LPAREN expression _RPAREN)?
 
-quantum_gate_call: quantum_gate_modifier* quantum_gate_name (_LPAREN expression_list _RPAREN)? index_identifier_list
+quantum_gate_call: quantum_gate_modifier* QUANTUM_GATE_NAME (_LPAREN expression_list _RPAREN)? index_identifier_list
 
 // Classical instructions
 
@@ -176,12 +168,13 @@ comparison_operator: ">" | "<" | ">=" | "<="
 
 equality_operator: "==" | "!="
 
-logical_operator: "&&" | "||"
+// logical_operator: "&&" | "||"
 
 expression_statement: expression _SEMICOLON
 
 expression: expression_terminator
-          | unary_expression
+// TODO: Figure out if there's a way to keep unary_expression 
+//          | unary_expression
           | logical_and_expression
           | expression "||" logical_and_expression
 
@@ -201,14 +194,14 @@ expression: expression_terminator
 // Logical And
 // Logical Or
 
-logical_and_expression: bit_or_expression
-                      | logical_and_expression "&&" bit_or_expression
+?logical_and_expression: bit_or_expression
+                       | logical_and_expression "&&" bit_or_expression
 
-bit_or_expression: xor_expression
-                 | bit_or_expression "|" xor_expression
+?bit_or_expression: xor_expression
+                  | bit_or_expression "|" xor_expression
 
-xor_expression: bit_and_expression
-              | xor_expression "^" bit_and_expression
+?xor_expression: bit_and_expression
+               | xor_expression "^" bit_and_expression
 
 bit_and_expression: equality_expression
                   | bit_and_expression "&" equality_expression
@@ -227,26 +220,24 @@ additive_expression: multiplicative_expression
 
 multiplicative_expression: power_expression
                          | unary_expression
-                         | multiplicative_expression (MUL | DIV | MOD) (power_expression | unary_expression)?
+                         | multiplicative_expression (MUL | DIV | MOD) (power_expression | unary_expression)
 
 unary_expression: unary_operator power_expression
 
-power_expression: expression_terminator | expression_terminator "**" power_expression
+power_expression: expression_terminator "**" power_expression
 
-expression_terminator: CONSTANT
-                     | INTEGER
-                     | REALNUMBER
-                     | IMAGNUMBER
-                     | boolean_literal
-                     | IDENTIFIER
-                     | STRINGLITERAL
-                     | builtin_call
-                     | extern_or_subroutine_call
-                     | timing_identifier
-                     | _LPAREN expression _RPAREN
-                     | expression_terminator _LBRACKET expression _RBRACKET
+!expression_terminator: CONSTANT
+                      | INTEGER
+                      | REALNUMBER
+                      | IMAGNUMBER
+                      | BOOLEAN_LITERAL
+                      | IDENTIFIER (_LBRACKET expression _RBRACKET)?
+                      | STRINGLITERAL
+                      | builtin_call
+                      | extern_or_subroutine_call (_LBRACKET expression _RBRACKET)?
+                      | timing_identifier
 
-boolean_literal: "true" | "false"
+
 
 builtin_call: (builtin_math | cast_operator) _LPAREN expression_list _RPAREN
 
@@ -254,11 +245,11 @@ builtin_math: "sin" | "cos" | "tan" | "exp" | "ln" | "sqrt" | "rotr" | "popcount
 
 cast_operator: classical_type
 
-expression_list: expression ("," expression)*
+expression_list: expression (_COMMA expression)*
 
-equals_expression: "->" expression
+equals_expression: _ARROW expression
 
-assignment_operator: "->" | "+=" | "-=" | "*=" | "/=" | "&=" | "|=" | "~=" | "^=" | "<<=" | ">>=" | "%=" | "**=="
+assignment_operator: ARROW | "+=" | "-=" | "*=" | "/=" | "&=" | "|=" | "~=" | "^=" | "<<=" | ">>=" | "%=" | "**=="
 
 set_declaration: _LBRACE expression_list _RBRACE
                | range_definition
@@ -279,12 +270,11 @@ end_statement: "end" _SEMICOLON
 return_statement: "return" (expression | quantum_measurement)? _SEMICOLON
 
 control_directive: ("break" | "continue") _SEMICOLON
-                 | end_statement
                  | return_statement
 
 extern_declaration: "extern" IDENTIFIER _LPAREN classical_type_list? _RPAREN return_signature? _SEMICOLON
 
-// if have function call w out args, is ambiguous; may get matched as identifier
+// if have function call w out args, is ambiguous; may get matched as IDENTIFIER
 extern_or_subroutine_call: IDENTIFIER _LPAREN expression_list? _RPAREN
 
 // Subroutines
@@ -301,8 +291,10 @@ timing_type: "duration" | "stretch"
 
 timing_box: "box" designator? quantum_block
 
-timing_identifier: TIMINGLITERAL
+timing_identifier: timing_literal
                  | "durationof" _LPAREN (IDENTIFIER | quantum_block ) _RPAREN
+
+timing_literal: (INTEGER | REALNUMBER) TIME_UNIT
 
 timing_instruction_name: "delay" | "rotary"
 
@@ -314,13 +306,12 @@ timing_statement: timing_instruction _SEMICOLON
 // Pulse-level descriptions of gates and measurement
 // TODO: Update when pulse grammar is formalized
 
-calibration: calibration_grammar_declaraion
+calibration: calibration_grammar_declaration
            | calibration_definition
 
 calibration_grammar_declaration: "defcalgrammar" calibration_grammar _SEMICOLON
 
-calibration_definition: "defcal" IDENTIFIER (_LPAREN calibration_argument_list? _RPAREN)? identifier_list
-                        return_signature? _LPAREN /^(?!.*\))?/ _RPAREN
+calibration_definition: "defcal" IDENTIFIER (_LPAREN calibration_argument_list? _RPAREN)? identifier_list return_signature? _LPAREN /^(!.+\))/ _RPAREN
 
 calibration_grammar: "\"openpulse\"" | STRINGLITERAL // currently: pulse grammar string can be anything
 
@@ -330,23 +321,59 @@ calibration_argument_list: classical_argument_list | expression_list
 
 %import common.SIGNED_INT -> INTEGER
 %import common.SIGNED_NUMBER -> REALNUMBER
-%import common.CNAME -> IDENTIFIER
 %import common.ESCAPED_STRING -> STRINGLITERAL
+%import common.LETTER -> LETTER
 %import common.WS
 
-CONSTANT: ("pi" | "π" | "tau" | "𝜏" | "euler" | "ℇ" )
-INPUT: "input"
-OUTPUT: "output"
-_IMAG: "im"
-_SEMICOLON: ";"
+BIT_TYPE: "bit" | "creg"
+QUANTUM_GATE_NAME: "U" | "CX" | IDENTIFIER
+IMAGNUMBER: (INTEGER | REALNUMBER) _IMAG
+BOOLEAN_LITERAL: "true" | "false"
+
 _LBRACKET: "["
 _RBRACKET: "]"
-_LPAREN: "("
-_RPAREN: ")"
+
 _LBRACE: "{"
 _RBRACE: "}"
-IMAGNUMBER: (INTEGER | REALNUMBER) _IMAG
-NEWLINE: [\r\n]+
 
-%ignore NEWLINE
+_LPAREN: "("
+_RPAREN: ")"
+
+_COLON: ":"
+_SEMICOLON: ";"
+
+_COMMA: ","
+
+_EQUALS: "="
+ARROW: "->"
+_ARROW: ARROW
+
+INPUT: "input"
+OUTPUT: "output"
+
+PLUS: "+"
+MINUS: "-"
+MUL: "*"
+DIV: "/"
+MOD: "%"
+
+_IMAG: "im"
+
+CONSTANT: ("pi" | "π" | "tau" | "𝜏" | "euler" | "ℇ" )
+
+TIME_UNIT: ("dt" | "ns" | "us" | "µs" | "ms" | "s")
+_NEWLINE: /[\r\n]+/
+
+VALID_UNICODE: /[\p{Lu}\p{Ll}\p{Lt}\p{Lm}\p{Lo}\p{Nl}]/
+
+FIRST_ID_CHARACTER: ("_" | "$" | VALID_UNICODE | LETTER)
+GENERAL_ID_CHARACTER: (FIRST_ID_CHARACTER | INTEGER)
+IDENTIFIER: FIRST_ID_CHARACTER GENERAL_ID_CHARACTER*
+
+_LINE_COMMENT: /\/\/[^\n]*/
+_BLOCK_COMMENT: "/*" /.*?/ "*/"
+
 %ignore WS
+%ignore _NEWLINE
+%ignore _LINE_COMMENT
+%ignore _BLOCK_COMMENT
