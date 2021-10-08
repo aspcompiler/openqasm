@@ -88,7 +88,7 @@ class QubitDeclaration(Statement):
         qubit[4] q;
 
         q // <- qubit
-        [4] // <- designator
+        [4] // <- size 
 
     """
 
